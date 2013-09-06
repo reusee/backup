@@ -5,5 +5,5 @@ import (
 )
 
 func TestIndex(t *testing.T) {
-	IndexDir("../../../media/anime", "meta")
+	IndexDir("/media/anime", "meta")
 }

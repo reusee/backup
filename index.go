@@ -38,7 +38,7 @@ func IndexDir(topDir string, metaFilepath string) {
 	}
 	fmt.Printf("read %d files from meta file\n", len(files))
 	endWriter, waitWriter := startWriter(files, metaFilepath)
-	err = Walk(topDir, func(path string, fileinfo os.FileInfo, err error) error {
+	err = walk(topDir, func(path string, fileinfo os.FileInfo, err error) error {
 		// check error
 		if err != nil {
 			log.Fatal(err)

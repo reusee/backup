@@ -2,6 +2,7 @@ package backup
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -41,5 +42,17 @@ func (self *LocalStorage) Set(key string, data []byte) error {
 	f.Write(data)
 	f.Close()
 	fmt.Printf("wrote %s\n", key)
+	return nil
+}
+
+func (self *LocalStorage) Get(key string, writer io.Writer) error {
+	path := filepath.Join(self.path, key)
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	fmt.Printf("retrieving %s\n", key)
+	io.Copy(writer, f)
 	return nil
 }

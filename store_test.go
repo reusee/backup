@@ -5,7 +5,7 @@ import (
 )
 
 func TestStore(t *testing.T) {
-	storage, err := NewLocalStorage("store_anime")
+	storage, err := NewLocalStorage("test_store")
 	if err != nil {
 		t.Fatal(err)
 	}

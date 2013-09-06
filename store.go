@@ -3,7 +3,6 @@ package backup
 import (
 	"crypto/md5"
 	"crypto/sha1"
-	"encoding/gob"
 	"fmt"
 	"io"
 	"log"
@@ -12,14 +11,7 @@ import (
 )
 
 func Store(dir string, metaFilepath string, storage Storage) {
-	files := make(map[string]*File)
-	f, err := os.Open(metaFilepath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-	gob.NewDecoder(f).Decode(&files)
-	fmt.Printf("load %d files from meta file\n", len(files))
+	files := readMetaFile(metaFilepath)
 	hasher1 := md5.New()
 	hasher2 := sha1.New()
 	for path, file := range files {
@@ -29,6 +21,7 @@ func Store(dir string, metaFilepath string, storage Storage) {
 			log.Fatal(err)
 		}
 		for _, blob := range file.Blobs {
+			//TODO fast skip
 			f.Seek(blob.Offset, 0)
 			buf := make([]byte, blob.Length)
 			n, err := io.ReadFull(f, buf)
@@ -54,4 +47,5 @@ func Store(dir string, metaFilepath string, storage Storage) {
 
 type Storage interface {
 	Set(key string, data []byte) error
+	Get(key string, writer io.Writer) error
 }
