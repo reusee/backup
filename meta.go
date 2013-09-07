@@ -2,7 +2,6 @@ package backup
 
 import (
 	"encoding/gob"
-	"fmt"
 	"log"
 	"os"
 )
@@ -15,6 +14,5 @@ func readMetaFile(metaFilepath string) map[string]*File {
 	}
 	defer f.Close()
 	gob.NewDecoder(f).Decode(&files)
-	fmt.Printf("load %d files from meta file\n", len(files))
 	return files
 }

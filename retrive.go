@@ -16,6 +16,9 @@ func Walk(metaFilepath string, storage Storage, cb ListCallback) {
 		var offset int64
 		for {
 			if blob, ok := file.Blobs[offset]; ok {
+				if blob.Length == 0 {
+					break
+				}
 				offset += blob.Length
 			} else {
 				break
@@ -41,7 +44,6 @@ func (self *File) Retrieve(dir string, storage Storage) error {
 		return err
 	}
 	defer f.Close()
-	fmt.Printf("retriving %s\n", self.Path)
 	//TODO check hash before retrive
 	var offset int64
 	for {
@@ -50,6 +52,9 @@ func (self *File) Retrieve(dir string, storage Storage) error {
 			err := storage.Get(key, f)
 			if err != nil {
 				return err
+			}
+			if blob.Length == 0 {
+				break
 			}
 			offset += blob.Length
 		} else {

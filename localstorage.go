@@ -1,7 +1,6 @@
 package backup
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -32,7 +31,6 @@ func NewLocalStorage(path string) (*LocalStorage, error) {
 func (self *LocalStorage) Set(key string, data []byte) error {
 	path := filepath.Join(self.path, key)
 	if _, err := os.Stat(path); err == nil { // already exists
-		fmt.Printf("skip %s\n", key)
 		return nil
 	}
 	f, err := os.Create(path)
@@ -41,7 +39,6 @@ func (self *LocalStorage) Set(key string, data []byte) error {
 	}
 	f.Write(data)
 	f.Close()
-	fmt.Printf("wrote %s\n", key)
 	return nil
 }
 
@@ -52,7 +49,6 @@ func (self *LocalStorage) Get(key string, writer io.Writer) error {
 		return err
 	}
 	defer f.Close()
-	fmt.Printf("retrieving %s\n", key)
 	io.Copy(writer, f)
 	return nil
 }

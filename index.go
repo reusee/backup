@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -13,7 +14,6 @@ import (
 	"time"
 )
 
-const BLOB_LENGTH = 32 * 1024 * 1024
 const FILEREAD_BUFFER_SIZE = 8 * 1024 * 1024
 
 type File struct {
@@ -29,19 +29,18 @@ type Blob struct {
 	Hash   string
 }
 
-func IndexDir(topDir string, metaFilepath string) {
+func IndexDir(topDir string, metaFilepath string, blobSize int64) error {
 	buf := make([]byte, FILEREAD_BUFFER_SIZE)
 	files := make(map[string]*File)
 	metaFile, err := os.Open(metaFilepath)
 	if err == nil {
 		gob.NewDecoder(metaFile).Decode(&files)
 	}
-	fmt.Printf("read %d files from meta file\n", len(files))
 	endWriter, waitWriter := startWriter(files, metaFilepath)
 	err = walk(topDir, func(path string, fileinfo os.FileInfo, err error) error {
 		// check error
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		// skip hidden files and dirs
 		if path != "." && path[0] == '.' {
@@ -53,7 +52,6 @@ func IndexDir(topDir string, metaFilepath string) {
 		if fileinfo.IsDir() {
 			return nil
 		}
-		fmt.Printf("indexing %s\n", path)
 		// file struct
 		file, ok := files[path]
 		if !ok {
@@ -81,9 +79,7 @@ func IndexDir(topDir string, metaFilepath string) {
 				break
 			}
 		}
-		fmt.Printf("start at offset %d\n", offset)
 		if offset == fileinfo.Size() { // all indexed
-			fmt.Printf("all indexed\n")
 			return nil
 		}
 		// index
@@ -99,14 +95,13 @@ func IndexDir(topDir string, metaFilepath string) {
 				hasher2.Write(buf[:n])
 				offset += int64(n)
 				length += int64(n)
-				if length >= BLOB_LENGTH {
+				if length >= blobSize {
 					sum := fmt.Sprintf("%x%x", hasher.Sum(nil), hasher2.Sum(nil))
 					file.Blobs[start] = &Blob{
 						Offset: start,
 						Length: length,
 						Hash:   sum,
 					}
-					fmt.Printf("new blob: %d %d %s\n", start, length, sum)
 					length = 0
 					start = offset
 					hasher.Reset()
@@ -120,10 +115,9 @@ func IndexDir(topDir string, metaFilepath string) {
 					Length: length,
 					Hash:   sum,
 				}
-				fmt.Printf("new blob: %d %d %s\n", start, length, sum)
 				break
 			} else if err != nil {
-				log.Fatalf("error when reading %s: %v", path, err)
+				return errors.New(fmt.Sprintf("error when reading %s: %v", path, err))
 			}
 		}
 		// save
@@ -131,10 +125,11 @@ func IndexDir(topDir string, metaFilepath string) {
 		return nil
 	})
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	endWriter <- true
 	<-waitWriter
+	return nil
 }
 
 func startWriter(files map[string]*File, metaFilepath string) (chan bool, chan bool) {
