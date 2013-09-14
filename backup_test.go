@@ -1,9 +1,13 @@
 package backup
 
 import (
+	"crypto/md5"
 	crand "crypto/rand"
+	"crypto/sha1"
+	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -51,19 +55,88 @@ func TestBackup(t *testing.T) {
 	}
 	fmt.Printf("stored\n")
 	// retrieve
+	retrieveDir := "test_retrieve"
 	fmt.Printf("retrieving\n")
-	err = deleteDir("test_retrieve")
+	err = deleteDir(retrieveDir)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 	Walk(metaFile, storage, func(file *File) {
-		err := file.Retrieve("test_retrieve", storage)
+		err := file.Retrieve(retrieveDir, storage)
 		if err != nil {
 			t.Fatalf("%v", err)
 		}
 	})
 	fmt.Printf("retrieved\n")
-	//TODO compare dir
+	// compare dir
+	err = compareDir(fileDir, retrieveDir)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+}
+
+func compareDir(left, right string) error {
+	lfs, err := ioutil.ReadDir(left)
+	if err != nil {
+		return err
+	}
+	rfs, err := ioutil.ReadDir(right)
+	if err != nil {
+		return err
+	}
+	if len(lfs) != len(rfs) {
+		return errors.New("diff")
+	}
+	for i, linfo := range lfs {
+		rinfo := rfs[i]
+		lpath := filepath.Join(left, linfo.Name())
+		rpath := filepath.Join(right, rinfo.Name())
+		if linfo.IsDir() {
+			// dir
+			if !rinfo.IsDir() {
+				return errors.New("diff")
+			}
+			compareDir(lpath, rpath)
+		} else {
+			// file
+			lsig, err := getSig(lpath)
+			if err != nil {
+				return err
+			}
+			rsig, err := getSig(rpath)
+			if err != nil {
+				return err
+			}
+			if lsig != rsig {
+				return errors.New("diff")
+			}
+		}
+	}
+	return nil
+}
+
+func getSig(filePath string) (string, error) {
+	hash1 := md5.New()
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	_, err = io.Copy(hash1, f)
+	if err != nil {
+		return "", err
+	}
+	f.Close()
+	hash2 := sha1.New()
+	f, err = os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	_, err = io.Copy(hash2, f)
+	if err != nil {
+		return "", err
+	}
+	f.Close()
+	return fmt.Sprintf("%x%x", hash1.Sum(nil), hash2.Sum(nil)), nil
 }
 
 func generateRandomFileOrDirs(dir string, depth int) error {
