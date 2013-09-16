@@ -44,8 +44,3 @@ func Store(dir string, metaFilepath string, storage Storage) error {
 	}
 	return nil
 }
-
-type Storage interface {
-	Set(key string, data []byte) error
-	Get(key string, writer io.Writer) error
-}

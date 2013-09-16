@@ -19,7 +19,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func TestBackup(t *testing.T) {
+func testBackup(storage Storage, t *testing.T) {
 	// generate files
 	fileDir := "test_data"
 	deleteDir(fileDir)
@@ -44,8 +44,6 @@ func TestBackup(t *testing.T) {
 	fmt.Printf("indexed\n")
 	// store
 	fmt.Printf("storing\n")
-	deleteDir("test_store")
-	storage, err := NewLocalStorage("test_store")
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
